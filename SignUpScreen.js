@@ -10,15 +10,18 @@ import {
   Platform,
   Alert,
   ScrollView,
+  ActivityIndicator,
 } from 'react-native';
+import API_BASE_URL from './config/api';
 
 export default function SignUpScreen({ navigation }) {
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [loading, setLoading] = useState(false);
 
-  const handleSignUp = () => {
+  const handleSignUp = async () => {
     if (!fullName || !email || !password || !confirmPassword) {
       Alert.alert('Error', 'Please fill in all fields');
       return;
@@ -29,15 +32,55 @@ export default function SignUpScreen({ navigation }) {
       return;
     }
 
-    // In a real app, send this to your backend.
-    // For now, just log and go back to Login.
-    console.log('New user:', { fullName, email, password });
-    Alert.alert('Account created', 'You can now log in with your details', [
-      {
-        text: 'OK',
-        onPress: () => navigation.navigate('Login', { emailPrefill: email }),
-      },
-    ]);
+    if (password.length < 6) {
+      Alert.alert('Error', 'Password must be at least 6 characters long');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const response = await fetch(`${API_BASE_URL}/users/register`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          name: fullName,
+          email: email,
+          password: password,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        Alert.alert('Success', 'Account created successfully!', [
+          {
+            text: 'OK',
+            onPress: () => navigation.navigate('Login', { emailPrefill: email }),
+          },
+        ]);
+      } else {
+        Alert.alert('Error', data.message || 'Failed to create account');
+      }
+    } catch (error) {
+      console.error('Signup error:', error);
+      let errorMessage = 'Network error. ';
+      
+      if (error.message.includes('Network request failed') || error.message.includes('Failed to fetch')) {
+        errorMessage += 'Please check:\n\n';
+        errorMessage += '1. Backend server is running (cd backend && npm start)\n';
+        errorMessage += '2. API URL is correct in config/api.js\n';
+        errorMessage += '3. If using physical device, update API URL with your computer\'s IP address\n';
+        errorMessage += '4. Both devices are on the same network';
+      } else {
+        errorMessage += error.message;
+      }
+      
+      Alert.alert('Connection Error', errorMessage);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -106,8 +149,16 @@ export default function SignUpScreen({ navigation }) {
               />
             </View>
 
-            <TouchableOpacity style={styles.signUpButton} onPress={handleSignUp}>
-              <Text style={styles.signUpButtonText}>Sign Up</Text>
+            <TouchableOpacity 
+              style={[styles.signUpButton, loading && styles.signUpButtonDisabled]} 
+              onPress={handleSignUp}
+              disabled={loading}
+            >
+              {loading ? (
+                <ActivityIndicator color="#000" />
+              ) : (
+                <Text style={styles.signUpButtonText}>Sign Up</Text>
+              )}
             </TouchableOpacity>
 
             <TouchableOpacity
@@ -184,6 +235,9 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '600',
     color: '#000',
+  },
+  signUpButtonDisabled: {
+    opacity: 0.6,
   },
   backToLogin: {
     alignItems: 'center',

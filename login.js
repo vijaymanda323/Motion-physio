@@ -9,6 +9,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   Alert,
+  ActivityIndicator,
 } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 
@@ -20,6 +21,7 @@ export default function LoginScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isPasswordVisible, setIsPasswordVisible] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   React.useEffect(() => {
     if (prefillEmail) {
@@ -32,10 +34,28 @@ export default function LoginScreen() {
       Alert.alert('Error', 'Please fill in all fields');
       return;
     }
-    
 
-    Alert.alert('Success', 'Login successful!');
-    console.log('Login attempt:', { email, password });
+    // Hardcoded credentials for now
+    const ADMIN_EMAIL = 'admin';
+    const ADMIN_PASSWORD = 'admin123';
+
+    setLoading(true);
+    
+    // Simulate network delay
+    setTimeout(() => {
+      if (email.toLowerCase() === ADMIN_EMAIL && password === ADMIN_PASSWORD) {
+        // Successful login - navigate to ProfileSetup
+        navigation.navigate('ProfileSetup', { 
+          user: {
+            email: email,
+            name: 'Admin'
+          }
+        });
+      } else {
+        Alert.alert('Error', 'Invalid email or password');
+      }
+      setLoading(false);
+    }, 500);
   };
 
   return (
@@ -95,8 +115,16 @@ export default function LoginScreen() {
               <Text style={styles.forgotText}>Forgot Password?</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity style={styles.loginButton} onPress={handleLogin}>
-              <Text style={styles.loginButtonText}>Login</Text>
+            <TouchableOpacity 
+              style={[styles.loginButton, loading && styles.loginButtonDisabled]} 
+              onPress={handleLogin}
+              disabled={loading}
+            >
+              {loading ? (
+                <ActivityIndicator color="#000" />
+              ) : (
+                <Text style={styles.loginButtonText}>Login</Text>
+              )}
             </TouchableOpacity>
 
             <View style={styles.divider}>
@@ -208,6 +236,9 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '600',
     color: '#000',
+  },
+  loginButtonDisabled: {
+    opacity: 0.6,
   },
   divider: {
     flexDirection: 'row',
